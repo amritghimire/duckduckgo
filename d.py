@@ -2,8 +2,13 @@ import logging
 import signal
 import subprocess
 import sys
+from termcolor import colored
+import re
+
+import os
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
+from urllib.parse import quote_plus
 
 try:
     import setproctitle
@@ -20,11 +25,10 @@ def sigint_handler(signum, frame):
 
 class Link:
 
-    def __init__(self, index_number, url="", title="", description=""):
+    def __init__(self, url="", title="", description=""):
         self.url = url
         self.title = title
         self.description = description
-        self.index = index_number
 
 
 signal.signal(signal.SIGINT, sigint_handler)
@@ -61,12 +65,41 @@ def print_err(msg):
     print(msg, file=sys.stderr)
 
 
-BASE_URL = "https://duckduckgo.com/html/?q=Amrit+Ghimire"
-html = urlopen(BASE_URL).read()
-soup = BeautifulSoup(html, "lxml")
-results = soup.find("div", "results")
-i = 0
-for result in results.find_all("div", "result"):
-    i+=1
-    title=result.find("div","result__title");
-    print(i,"\n\n\n", result, "\n\n\n\n")
+def strip_html(data):
+    p = re.compile(r'<.*?>')
+    return p.sub('', data)
+
+
+def search_for(search_term):
+    base_url = "https://duckduckgo.com/html/?q="
+    urls = base_url + quote_plus(search_term)
+    html = urlopen(urls).read()
+    soup = BeautifulSoup(html, "lxml")
+    results = soup.find("div", "results")
+    lists_of_results = list()
+    for result in results.find_all("div", "result"):
+        title = strip_html(str(result.find("h2", "result__title")))
+        url = result.find('h2', 'result__title').a["href"]
+        description = strip_html(str(result.find("a", "result__snippet")))
+        lists_of_results.append(Link(url, title, description))
+    q = ''
+    start = 0
+    while q != 'q':
+        subprocess.call('clear')
+        for i in range(start, start + 10):
+            print(colored(":" + str(i) + ":", "red"), colored(lists_of_results[i].title, "blue"),
+                  colored(lists_of_results[i].description, "magenta"))
+        if start == 0:
+            q = input("Enter the link index to open or q to exit (n=> next):")
+        elif start == 10:
+            q = input("Enter the link index to open or q to exit (p=> previous):")
+        if q.lower() == "q":
+            break
+        elif q.lower() == 'n' and start == 0:
+            start = 10
+        elif q.lower() == 'p' and start == 10:
+            start = 0
+
+
+search_text = input("Enter search text: ")
+search_for(search_text)
