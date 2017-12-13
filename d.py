@@ -54,7 +54,7 @@ USER_AGENT = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:56.0) Gecko/20100101 Fi
 
 
 def url_open(url):
-    subprocess.call("w3m", url)
+    os.system("w3m '" + url + "'")
 
 
 def print_err(msg):
@@ -72,23 +72,24 @@ def strip_html(data):
 
 def search_for(search_term):
     base_url = "https://duckduckgo.com/html/?q="
-    urls = base_url + quote_plus(search_term)
+    urls = base_url + quote_plus(search_term) + "&kp=-2"
     html = urlopen(urls).read()
     soup = BeautifulSoup(html, "lxml")
     results = soup.find("div", "results")
     lists_of_results = list()
     for result in results.find_all("div", "result"):
         title = strip_html(str(result.find("h2", "result__title")))
-        url = result.find('h2', 'result__title').a["href"]
+        url = "https://duckduckgo.com" + result.find('h2', 'result__title').a["href"]
         description = strip_html(str(result.find("a", "result__snippet")))
         lists_of_results.append(Link(url, title, description))
     q = ''
     start = 0
     while q != 'q':
         subprocess.call('clear')
-        for i in range(start, start + 10):
+        # print(lists_of_results, len(lists_of_results))
+        for i in range(start, min(start + 10, len(lists_of_results))):
             print(colored(":" + str(i) + ":", "red"), colored(lists_of_results[i].title, "blue"),
-                  colored(lists_of_results[i].description, "magenta"))
+                  lists_of_results[i].description)
         if start == 0:
             q = input("Enter the link index to open or q to exit (n=> next):")
         elif start == 10:
@@ -99,6 +100,14 @@ def search_for(search_term):
             start = 10
         elif q.lower() == 'p' and start == 10:
             start = 0
+        else:
+            try:
+                n = int(q)
+
+                if n < len(lists_of_results):
+                    url_open(lists_of_results[n].url)
+            except ValueError:
+                pass
 
 
 search_text = input("Enter search text: ")
