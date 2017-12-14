@@ -41,11 +41,17 @@ _VERSION_ = '3.4'
 configParser=configparser.RawConfigParser()
 configFilePath=r'core.conf'
 configParser.read(configFilePath)
-
+browser="w3m"
+b_mode=configParser.get("general","browser_mode").strip().strip('"')
+if b_mode.lower()=="text":
+    browser=configParser.get("browser","text_browser")
+else:
+    browser=configParser.get("browser","gui_browser")
+ 
 
 
 def url_open(url):
-    os.system("w3m '" + url + "'")
+   os.system(browser+" '" + url + "'")
 
 
 def print_err(msg):
